@@ -1,0 +1,9 @@
+v0.1.0, August 15, 2012 -- Initial Release
+v0.1.1, August 15, 2012 -- 
+	Removed GDAL Dependency via pip.  Users should install via one of the many available binaries.
+0.1.2 August 22, 2012 --
+    - rewrote import statements
+    - changed pystretch to pystretcher.py to avoid naming conflicts
+    - updated the readme to remove parsing errors
+    - Altered scale (core.Stats.scale) to default to between 1 and 255.  This allows 0 to be maintained as a special, no data value.
+    - Moved gc module to mandatory import in pystretcher.py
