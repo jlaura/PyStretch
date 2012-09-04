@@ -2,7 +2,7 @@ from distutils.core import setup
 
 setup(
     name='PyStretch',
-    version='0.1.2',
+    version='0.1.3',
     author='Jay Laura',
     author_email='jlaura@asu.edu',
     packages=['pystretch', 'pystretch.core', 'pystretch.filter',

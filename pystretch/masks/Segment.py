@@ -1,9 +1,11 @@
 import numpy
 
 def segment_image(xsize, ysize, xsegment=1, ysegment=1):
-    """Function to segment the images into a user defined number of sections and store the segment dimensions in a dictionary.
+    """Function to segment the images into a user defined number of sections 
+    and store the segment dimensions in a tuple.
     
-    We assume that the image has the same dimensions, with the same pixel size in every band.  This may not hold true for formats like JP2k."""
+    We assume that the image has the same dimensions, with the same pixel 
+    size in every band.  This may not hold true for formats like JP2k."""
 
         
     intervalx = xsize / xsegment

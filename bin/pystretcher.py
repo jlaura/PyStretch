@@ -6,9 +6,8 @@ from pystretch.masks import Segment
 
 #Debugging imports
 #import profile
-
-
 #Core imports
+
 import multiprocessing
 from contextlib import closing
 import sys
@@ -45,7 +44,7 @@ def main(options, args):
     starttime = Timer.starttimer()
     #Cache thrashing is common when working with large files, we help alleviate misses by setting a larger than normal cache.  1GB
     gdal.SetCacheMax(1073741824)
-
+    
     #Check for input
     if not args:
         print "\nERROR: You must supply an input data set.\n"
@@ -65,25 +64,22 @@ def main(options, args):
 
     #Default is none, unless user specified
     if options['dtype'] == None:
-        dtype = raster.GetRasterBand(1).DataType
+        dtype = gdal.GetDataTypeName(raster.GetRasterBand(1).DataType)
     else:
-        dtype=gdal.GetDataTypeByName(options['dtype'])
-        
+        dtype=options['dtype']
+    
     #Create an output if the stretch is written to disk
     xsize, ysize, bands, projection, geotransform = dataset.info(raster)
-    output = dataset.create_output("",options['output'],xsize,ysize,bands,projection, geotransform, dtype)
+    output = dataset.create_output("",options['output'],xsize,ysize,bands,projection, geotransform, gdal.GetDataTypeByName(dtype))
 
     #Segment the image to handle either RAM constraints or selective processing
     segments = Segment.segment_image(xsize,ysize,options['vint'], options['hint'])
-
+    
     for b in xrange(bands):
-
         band = raster.GetRasterBand(b+1)
-        dtype = gdal.GetDataTypeName(band.DataType)
         bandstats = Stats.get_band_stats(band)
         for key in bandstats.iterkeys():
             options[key] = bandstats[key]            
-        print "Read band %i of %i" %(b+1, bands)
         
         #Get the size of the segments to be manipulated
         piecenumber = 1
@@ -92,15 +88,29 @@ def main(options, args):
             print "Image segmented.  Processing segment %i of %i" %(piecenumber, len(segments))
             piecenumber += 1
             (xstart, ystart, intervalx, intervaly) = chunk
-            array = band.ReadAsArray(xstart, ystart, intervalx, intervaly).astype(numpy.float)
-            if options['ndv'] != None:
+            
+            array = band.ReadAsArray(xstart, ystart, intervalx, intervaly).astype(numpy.float32)
+            
+            if options['ndv_band'] != None:
+                array = numpy.ma.masked_values(array, options['ndv_band'], copy=False)
+            elif options['ndv'] != None:
                 array = numpy.ma.masked_values(array, options['ndv'], copy=False)
+            
             if 'stretch' in stretch.__name__:
                 array = Stats.normalize(array, options['bandmin'], options['bandmax'], dtype)
-            stats = Stats.get_array_stats(array, stretch) 
-            for key in stats.iterkeys():
-                options[key] = stats[key]
-  
+    
+            #If the user wants to calc stats per segment:
+            if options['segment'] == True:  
+                stats = Stats.get_array_stats(array, stretch) 
+                for key in stats.iterkeys():
+                    options[key] = stats[key]
+            #Otherwise use the stats per band for each segment
+            else:
+                options['mean'] = options['bandmean']
+                options['maximum'] = options['bandmax']
+                options['minimum'] = options['bandmin']
+                options['standard_deviation'] = options['bandstd']
+            
             y,x = array.shape
             
             #Calculate the hist and cdf if we need it.  This way we do not calc it per core.
@@ -113,10 +123,9 @@ def main(options, args):
             #Fill the masked values with NaN to get to a shared array
             if options['ndv'] != None:
                 array = array.filled(numpy.nan)
-
+            
             #Create an ctypes array
             init(ArrayConvert.SharedMemArray(array))
-            
             
             step = y // cores
             jobs = []
@@ -149,17 +158,21 @@ def main(options, args):
             #Write the output
             output.GetRasterBand(b+1).WriteArray(shared_arr.asarray(), xstart,ystart)            
 
-            #Flush the GDAL cache to avoid band thrashing and cache misses
-            output.GetRasterBand(b+1).FlushCache()
-            band.FlushCache()
-
             #Manually cleanup to stop memory leaks.
-            del stats,array, jobs, shared_arr.data, p
+            del array, jobs, shared_arr.data
+            try: 
+                del stats
+            except:
+                pass
             del globals()['shared_arr']
             gc.collect()
+            
             if options['ndv'] != None:
                 output.GetRasterBand(b+1).SetNoDataValue(float(options['ndv']))
-
+            elif options['ndv_band'] != None:
+                output.GetRasterBand(b+1).SetNoDataValue(float(options['ndv_band']))
+                
+                
     if options['visualize'] == True:
         Plot.show_hist(shared_arr.asarray())
     
@@ -172,15 +185,13 @@ def main(options, args):
 
 def init(shared_arr_):
     global shared_arr
-    shared_arr = shared_arr_ # must be inhereted, not passed as an argumentglobal array
-    
-
+    shared_arr = shared_arr_ # must be inhereted, not passed as an argument global array
 
 if __name__ == '__main__':
     multiprocessing.freeze_support()
     #If the script is run via the command line we start here, otherwise start in main.
     (options, args) = OptParse.parse_arguments()
-    #gdal.SetConfigOption('CPL_DEBUG', 'ON')
+    gdal.SetConfigOption('CPL_DEBUG', 'ON')
 
     main(options, args)
     

@@ -7,3 +7,21 @@ v0.1.1, August 15, 2012 --
     - updated the readme to remove parsing errors
     - Altered scale (core.Stats.scale) to default to between 1 and 255.  This allows 0 to be maintained as a special, no data value.
     - Moved gc module to mandatory import in pystretcher.py
+0.1.3 
+    - Changed ReadAsArray function in pystretcher.py to read the array at the highest necessary dtype to avoid always reading at 64bit float.
+        - Reverted during testing - normalization requires float32 so we read at float32 for all dtypes.
+    - Added a helper function Stats.datatype to convert between the gdal string dtype and the numpy method dtype. (Unused)
+    - Started adding method doc strings for improved documentation
+    - Updated PyStretch documentation using Sphinx
+    - Alter Stats.get_band_stats to use band.GetStatistics(0,1)
+    - Added a flag to allow stats in stretches to be by band or by segment
+    - Updated Doc String on Stats.get_band_stats()
+    - Added module custom so that user can implement custom algorithms
+    - Added a --custom flag that will call the custom algorithm
+    - In pystretcher, added a conditional to flush the band cache every 4th iteration.  Struggling with thrashing.
+    - Deleted a number of print statements
+    - Differentiated between NDV captured from the band and NDV which the user defines.  We now track both and map the output NDV to either the dtype default or the user defined NDV
+    - Removed the -writeblock flag as it is unneeded.
+    - Tested for memory leak reading array with specific dtype - All good.
+    - Alter the linear stretch to be straight 0-255.  TODO is to reintroduce clipping properly.
+    

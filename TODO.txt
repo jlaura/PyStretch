@@ -1,0 +1,6 @@
+#TODO
+
+Allow stat calculation per segment or for the entire image
+SEtup to normalize unsigned between -1 and 1
+Confirm how no data is working
+	It should be that when a user defined nodata, the old nodata value is also mapped to the user defined no data value
