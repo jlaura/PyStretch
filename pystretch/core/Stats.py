@@ -1,6 +1,9 @@
 import numpy
 import gc
+<<<<<<< HEAD
 import time
+=======
+>>>>>>> a9949947961ede39cc884d99998511ea012c6e8c
 
 
 _datatype_integer_ranges = {
@@ -12,6 +15,7 @@ _datatype_integer_ranges = {
     'Int32' : [-2147483648, 2147483647],
     'Float32' : [-3.402823466**38, 3.402823466**38 ]
     }
+<<<<<<< HEAD
 
 _gdal_to_numpy = { 'Byte': numpy.int8,
                    'Int16' : numpy.int16,
@@ -35,6 +39,8 @@ def datatype(dtype):
     
     return arraytype
 
+=======
+>>>>>>> a9949947961ede39cc884d99998511ea012c6e8c
 def denorm(array, dtype, kwargs):
 
     #Do not attempt to rescale the histogram equalization
@@ -55,6 +61,7 @@ def denorm(array, dtype, kwargs):
     
 
 def get_array_stats(array, stretch):
+<<<<<<< HEAD
     '''
     Calculates the statistics from a numpy array and returns a dictionary containing:
     mean, maximum, minimum, and potentially standard deviation.
@@ -69,6 +76,14 @@ def get_array_stats(array, stretch):
     stats['mean'] = float(array.mean())
     stats['maximum'] = float(array.max())
     stats['minimum'] = float(array.min())
+=======
+    """Get statistics from the input array"""
+    mean = array.mean()
+    maximum = array.max()
+    minimum = array.min()
+    stats = {'mean':float(mean), 'maximum':float(maximum), 'minimum':float(minimum)}
+    del maximum, minimum, mean
+>>>>>>> a9949947961ede39cc884d99998511ea012c6e8c
     gc.collect()
     #Standard Deviation takes a few seconds to calculate.  Skip it if you do not need it. Worse - numpy.std makes an in memory copy of the array...
     try:
@@ -85,6 +100,7 @@ def get_array_stats(array, stretch):
     return stats
 
 def get_band_stats(band):
+<<<<<<< HEAD
     
     '''
     Get the pre-cached statistics from the input band.
@@ -108,6 +124,20 @@ def gethist_cdf(array,num_bins):
     
     Returns: cumulative distribution function, bins
     '''
+=======
+    """Get statistics from the input band, including the NoData Value"""
+    ndv = band.GetNoDataValue()
+    bandmin = band.GetMinimum()
+    bandmax = band.GetMaximum()
+    
+    if bandmin is None or bandmax is None:
+        #Approx has to be set to false to ensure that an accurate Min/Max are calculated...
+        (bandmin, bandmax) = band.ComputeRasterMinMax(False)
+    stats = {'ndv':ndv, 'bandmin':bandmin, 'bandmax':bandmax}
+    return stats
+
+def gethist_cdf(array,num_bins):
+>>>>>>> a9949947961ede39cc884d99998511ea012c6e8c
     hist, bins = numpy.histogram(array.flatten(), num_bins, density=False)
     cdf = hist.cumsum()
     cdf ** 0.5
@@ -115,6 +145,7 @@ def gethist_cdf(array,num_bins):
     return cdf, bins
 
 def maskNDV(array, NDV):
+<<<<<<< HEAD
     '''
     This function masks the no data values in an input array so that they are not included in
     any of the processing algorithms.  This is essential to ensure that statistics are calculated properly at the array level.
@@ -122,10 +153,15 @@ def maskNDV(array, NDV):
     Returns an array of type numpy.ma.masked.  This is NOT an ndarray.
     '''
     
+=======
+    """Maks the NoData values in an array.  
+    This is essential to ensure that statistics are calculated properly."""
+>>>>>>> a9949947961ede39cc884d99998511ea012c6e8c
     array = numpy.ma.masked_where(array == NDV, input_array, copy=False)
     return array
 
 def normalize(array, bandmin, bandmax, dtype):
+<<<<<<< HEAD
     '''
     This function normalizes a data set to between 0-1
     
@@ -138,6 +174,13 @@ def normalize(array, bandmin, bandmax, dtype):
     Returns a normalized array
     '''
     
+=======
+    """Normalize the dataset for a number of reasons:
+        1. To avoid divide by zero errors
+        2. To prepare for certain stretches that require values between -1 and 1 """
+    #Do not normalize float, the rounding errors are too large and skew a lot of the calculations
+    #TODO -  How can we handle float32 if we must normalize?
+>>>>>>> a9949947961ede39cc884d99998511ea012c6e8c
     if dtype == 'Float32':
         pass
     #If the data type is unsigned, normalize to between 0 and 1
@@ -152,6 +195,7 @@ def normalize(array, bandmin, bandmax, dtype):
     return array
 
 def scale(array, kwargs):
+<<<<<<< HEAD
     '''
     This function is used to scale the data between a user defined range [c,d].  By default this range is between 1 and 255.  This maintains 0 as a special no data value should the user wish to set it.
     
@@ -161,6 +205,12 @@ def scale(array, kwargs):
         
     Returns a scaled ndarray
     '''
+=======
+    '''Scale from (a,b) to c,d)
+        y = mx+b
+        x = ((x-a)(d-c)/(b-a))+c
+        '''
+>>>>>>> a9949947961ede39cc884d99998511ea012c6e8c
     if kwargs['scale'] == None:
         scalemin = 1.0
         scalemax = 255.0
@@ -176,11 +226,14 @@ def scale(array, kwargs):
     return array
 
 def setnodata(shared_arr, ndv):
+<<<<<<< HEAD
     '''
     This function sets the numpy nan, presumed to be a masked no data value to either the input datasets no data value or a user specified no data value.
     
     Returns an ndarray with NaN replaced with the defined no data value.
     '''
+=======
+>>>>>>> a9949947961ede39cc884d99998511ea012c6e8c
     if ndv != None:
         arr = shared_arr.asarray()
         arr = numpy.nan_to_num(ndv)

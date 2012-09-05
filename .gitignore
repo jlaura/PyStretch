@@ -1,0 +1,12 @@
+#OS X Crap#
+##########
+.DS_Store
+
+#Build/Dist#
+############
+build/
+dist/
+
+#Bookkeeping#
+#############
+TODO.txt	
