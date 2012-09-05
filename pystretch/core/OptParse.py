@@ -2,10 +2,7 @@ import optparse
 from pystretch.linear import Linear
 from pystretch.nonlinear import Nonlinear
 from pystretch.filter import Filter
-<<<<<<< HEAD
 from pystretch.custom import Custom
-=======
->>>>>>> a9949947961ede39cc884d99998511ea012c6e8c
 
 def parse_arguments():
     
@@ -20,27 +17,17 @@ def parse_arguments():
     directionOptions = optparse.OptionGroup(parser, 'Directional Options')
     nonlinearstretches = optparse.OptionGroup(parser, 'Non-linear Stretches')
     filters = optparse.OptionGroup(parser, 'Filters')
-<<<<<<< HEAD
     custom = optparse.OptionGroup(parser, 'Custom')
-=======
->>>>>>> a9949947961ede39cc884d99998511ea012c6e8c
     
     generalOptions.add_option('--output', '-o',action='store',type='string',default='output.tif',dest='output',help='The optional output file')
     generalOptions.add_option('--format', '-f',action='store',type='string',default='GTiff', dest="outputFormat" ,help='Any GDAL supported output format. Default: [%default]') 
     generalOptions.add_option('--ot', action='store', type='string', dest='dtype',default=None, help='A GDAL output format. (Byte, Int16, Float32 are likely candidates.' )
-<<<<<<< HEAD
     generalOptions.add_option('--visualize', '-z', action='store_true', default=False, dest='visualize', help='show the output histogram.')
     generalOptions.add_option('--NDV', action='store', dest='ndv', type='float', help='Define an output NDV.  If the dataset has an NDV, this value and the intrinsic NDV are set to No Data in the output.  The output NDV is this value.')    
     generalOptions.add_option('--scale','-s', action='store', dest='scale',nargs=2, type='string', help='Scale the data to 8-bit')
     generalOptions.add_option('--segment', '--seg', action='store_true', default=False, dest='segment', help='Use this flag to calculate statistics per segment instead of per band.  Best for removing spatially describale systematic error.')
     
     custom.add_option('--custom', action='store_true', default=False, dest='custom_stretch', help='Use this flag to call your own custom stretch.  You will need to code it into the custom_stretch function inside the Custom module')
-=======
-    generalOptions.add_option('--writesize', '-w', action='store', type='int', default=50, dest='writesize', help='An integer to control the size of the array blocks stored in memory prior to writing.  In short, this is the number of array blocks stored in memory prior to writing.')
-    generalOptions.add_option('--visualize', '-z', action='store_true', default=False, dest='visualize', help='show the output histogram.')
-    generalOptions.add_option('--NDV', action='store', dest='NDV', type='float', help='Define a no data value if teh dataset does not have one.')    
-    generalOptions.add_option('--scale','-s', action='store', dest='scale',nargs=2, type='string', help='Scale the data to 8-bit')
->>>>>>> a9949947961ede39cc884d99998511ea012c6e8c
     
     directionOptions.add_option('--horizontal', '-t', action='store',type='int', dest='hint', default=1, help='The number of horizontal segments to divide the image into.  This will likely leave a small "remainder" segment at the edge of the image.')
     directionOptions.add_option('--vertical', '-v', action='store', type='int', dest ='vint', default=1, help='The number of vertical segments to divide the image into.  This will likely leave a small "remainder" segment at the edge of the image.')
@@ -83,10 +70,7 @@ def parse_arguments():
     parser.add_option_group(linearStretches)
     parser.add_option_group(nonlinearstretches)
     parser.add_option_group(filters)
-<<<<<<< HEAD
     parser.add_option_group(custom)
-=======
->>>>>>> a9949947961ede39cc884d99998511ea012c6e8c
 
     
     (options, args) = parser.parse_args()
@@ -128,10 +112,7 @@ def get_stretch(options):
         return Filter.gaussian_hipass
     elif options['conservative_filter'] == True:
         return Filter.conservative_filter
-<<<<<<< HEAD
     elif options['custom_stretch'] == True:
         return Custom.custom_stretch
-=======
->>>>>>> a9949947961ede39cc884d99998511ea012c6e8c
         
             
