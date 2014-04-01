@@ -9,4 +9,12 @@ dist/
 
 #Bookkeeping#
 #############
-TODO.txt	
+TODO.txt
+
+#VIM
+*.swp
+*.swo
+
+#Python
+*.pyc
+*.pyo	
