@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 #Internal imports
-from pystretch.core import GdalIO, ArrayConvert, OptParse, Stats, Timer
+from pystretch.core import GdalIO, OptParse, Stats, Timer
 from pystretch.masks import Segment
 
 #Debugging imports
