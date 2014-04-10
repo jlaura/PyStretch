@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 
 #Internal imports
-from pystretch.core import GdalIO, OptParse, Stats, Timer
+from pystretch.core import OptParse, Stats, Timer
+from pystretch.core.GdalIO import OpenDataSet, create_output
 from pystretch.masks import Segment
 
 #Debugging imports
@@ -10,7 +11,6 @@ from pystretch.masks import Segment
 
 import multiprocessing as mp
 import ctypes
-from contextlib import closing
 import sys
 import time
 import gc
@@ -41,83 +41,125 @@ except ImportError:
     print "Some functionality will not work without scipy installed."
 
 
+_gdal_to_ctypes = {1:ctypes.c_byte}
+_gdal_to_numpy = {1:np.int8}
+
+_ctypes_to_np = {
+    ctypes.c_char : np.int8,
+    ctypes.c_wchar : np.int16,
+    ctypes.c_byte : np.int8,
+    ctypes.c_ubyte : np.uint8,
+    ctypes.c_short : np.int16,
+    ctypes.c_ushort : np.uint16,
+    ctypes.c_int : np.int32,
+    ctypes.c_uint : np.int32,
+    ctypes.c_long : np.int32,
+    ctypes.c_ulong : np.int32,
+    ctypes.c_float : np.float32,
+    ctypes.c_double : np.float64
+}
+
+
+
+
+
+def segment_image(xsize, ysize, xsegment, ysegment):
+    """Function to segment the images into a user defined number of sections
+    and store the segment dimensions in a tuple.
+
+    We assume that the image has the same dimensions, with the same pixel
+    size in every band.  This may not hold true for formats like JP2k."""
+
+    if xsegment is None:
+        xsegment = 1
+    if ysegment is None:
+        ysegment = 1
+
+    intervalx = xsize / xsegment
+    intervaly = ysize / ysegment
+
+    #Setup to segment the image storing the start values and key into a dictionary.
+    xstart = 0
+    ystart = 0
+    output = []
+    for y in xrange(0, ysize, intervaly):
+        if y + intervaly * 2 <= ysize:
+            numberofrows = intervaly
+        else:
+            numberofrows = ysize - y
+        for x in xrange(0, xsize, intervalx):
+            if x + intervalx * 2 <= xsize:
+                numberofcolumns = intervalx
+            else:
+                numberofcolumns = xsize - x
+            output.append((x,y,numberofcolumns, numberofrows))
+    return output
+
 
 def initarr(shared_arr_):
     global shared_arr
     shared_arr = shared_arr_ # must be inhereted, not passed as an argument global array
 
-def main(options, args):
+def main(args):
     starttime = Timer.starttimer()
-    #Cache thrashing is common when working with large files, we help alleviate misses by setting a larger than normal cache.  1GB
+    #Cache thrashing is common when working with large files
+    # we help alleviate misses by setting a larger than normal cache.  1GB
+
     gdal.SetCacheMax(1073741824)
 
-    #Check for input
-    if not args:
-        print "\nERROR: You must supply an input data set.\n"
-        sys.exit(0)
-
     #Get stretch type
-    stretch = OptParse.get_stretch(options)
+    stretch = OptParse.argget_stretch(args)
 
     #Get some info about the machine for mp
-    cores = mp.cpu_count()
-    print "Processing on %i cores." %cores
+    cores = args['ncores']
+    if cores is None:
+        cores = mp.cpu_count()
 
     #Load the input dataset using the GdalIO class and get / set the output datatype.
-    dataset = GdalIO.GdalIO(args[0])
+    dataset = OpenDataSet(args['input'])
     raster = dataset.load()
-
-    #Default is none, unless user specified
-    if options['dtype'] == None:
-        dtype = gdal.GetDataTypeName(raster.GetRasterBand(1).DataType)
-    else:
-        dtype=options['dtype']
-
     #Create an output if the stretch is written to disk
     xsize, ysize, bands, projection, geotransform = dataset.info(raster)
-    output = dataset.create_output("",options['output'],xsize,ysize,bands,projection, geotransform, gdal.GetDataTypeByName(dtype))
+    '''
+    output = create_output(args['outputformat'],args['output'],
+                           xsize, ysize, bands, projection,
+                           geotransform, gdal.GetDataTypeByName(args['dtype']))
+    '''
 
-    #Segment the image to handle either RAM constraints or selective processing
-    segments = Segment.segment_image(xsize,ysize,options['vint'], options['hint'])
-
+    if args['horizontal_segments'] is not None or args['vertical_segments'] is not None:
+        segments = segment_image(xsize, ysize,
+                                args['vertical_segments'],
+                                args['horizontal_segments'])
+    else:
+        #TODO: Logic here to guess if the image will be too large
+        segments = [(0,0,xsize, ysize)]
+    banddtype = 0
     for b in xrange(bands):
         band = raster.GetRasterBand(b+1)
+        if band.DataType > banddtype:
+            banddtype = band.DataType
         bandstats = Stats.get_band_stats(band)
-        for key in bandstats.iterkeys():
-            options[key] = bandstats[key]
 
-        #Get the size of the segments to be manipulated
-        piecenumber = 1
-        for chunk in segments:
+    carray_dtype = _gdal_to_ctypes[banddtype]
+    #Preallocate the sharedmem array
+    intervalx, intervaly = segments[0][2:]
+    carray = mp.RawArray(carray_dtype, intervalx * intervaly)
+    print intervalx, intervaly
 
-            print "Image segmented.  Processing segment %i of %i" %(piecenumber, len(segments))
-            piecenumber += 1
-            (xstart, ystart, intervalx, intervaly) = chunk
+    print "Post allocation"
+    for i, chunk in enumerate(segments):
+            xstart, ystart, intervalx, intervaly = chunk
+            print "Reading to buffer is doubling memory usage...why?"
+            array = np.frombuffer(carray,dtype=_gdal_to_numpy[banddtype]).reshape(intervaly, intervalx)
+            array[:] = band.ReadAsArray(xstart, ystart, intervalx, intervaly)
 
-            carray = mp.RawArray(ctypes.c_double, intervalx * intervaly)
-            array = np.frombuffer(carray).reshape(intervaly, intervalx)
-            array[:] = band.ReadAsArray(xstart, ystart, intervalx, intervaly).astype(np.float32)
-
-            if options['ndv_band'] != None:
-                array = np.ma.masked_values(array, options['ndv_band'], copy=False)
-            elif options['ndv'] != None:
-                array = np.ma.masked_values(array, options['ndv'], copy=False)
-
-            if 'stretch' in stretch.__name__:
-                array = Stats.normalize(array, options['bandmin'], options['bandmax'], dtype)
-
-            #If the user wants to calc stats per segment:
-            if options['segment'] == True:
-                stats = Stats.get_array_stats(array, stretch)
-                for key in stats.iterkeys():
-                    options[key] = stats[key]
-            #Otherwise use the stats per band for each segment
-            else:
-                options['mean'] = options['bandmean']
-                options['maximum'] = options['bandmax']
-                options['minimum'] = options['bandmin']
-                options['standard_deviation'] = options['bandstd']
-
+            if bandstats['ndv_band'] != None:
+                array, mask = np.ma.masked_values(array, bandstats['ndv_band'], copy=False)
+            print mask
+            exit()
+            if args['statsper'] is True:
+                segmentstats = Stats.get_array_stats(array, stretch)
+            print segmentstats
             y,x = array.shape
 
             #Calculate the hist and cdf if we need it.  This way we do not calc it per core.
@@ -181,8 +223,6 @@ def main(options, args):
                 output.GetRasterBand(b+1).SetNoDataValue(float(options['ndv_band']))
 
 
-    if options['visualize'] == True:
-        Plot.show_hist(shared_arr)
 
     Timer.totaltime(starttime)
 
@@ -195,7 +235,7 @@ def main(options, args):
 if __name__ == '__main__':
     mp.freeze_support()
     #If the script is run via the command line we start here, otherwise start in main.
-    (options, args) = OptParse.parse_arguments()
+    #(options, args) = OptParse.parse_arguments()
     #gdal.SetConfigOption('CPL_DEBUG', 'ON')
 
-    main(options, args)
+    main(OptParse.argparse_arguments())

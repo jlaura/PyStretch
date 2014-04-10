@@ -1,13 +1,13 @@
 import numpy
 
 def segment_image(xsize, ysize, xsegment=1, ysegment=1):
-    """Function to segment the images into a user defined number of sections 
+    """Function to segment the images into a user defined number of sections
     and store the segment dimensions in a tuple.
-    
-    We assume that the image has the same dimensions, with the same pixel 
+
+    We assume that the image has the same dimensions, with the same pixel
     size in every band.  This may not hold true for formats like JP2k."""
 
-        
+    print xsegment
     intervalx = xsize / xsegment
     intervaly = ysize / ysegment
 
@@ -15,15 +15,16 @@ def segment_image(xsize, ysize, xsegment=1, ysegment=1):
     xstart = 0
     ystart = 0
     output = []
-    
+
     for y in xrange(0, ysize, intervaly):
         numberofrows = intervaly if y + (intervaly * 2) < ysize else ysize -y
         for x in xrange(0, xsize, intervalx):
             numberofcolumns = intervalx if x + (intervalx * 2) < xsize else xsize -x
             tple = (x,y,numberofcolumns, numberofrows)
-            output.append(tple)    
+            output.append(tple)
+    print output
     return output
-    
 
-    
+
+
 

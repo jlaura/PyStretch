@@ -46,3 +46,9 @@ def lowcut_stretch(shared_array, i, **kwargs):
     threshold = (threshold - kwargs['bandmin'])/(kwargs['bandmax']-kwargs['bandmin'])
     low_value_index = shared_array[i] < threshold
     shared_array[i][low_value_index] = kwargs['cutvalue']
+
+def minmax_stretch(shared_array, i, **kwargs):
+    pass
+
+def clip_stretch(shared_array, i, **kwargs):
+    pass

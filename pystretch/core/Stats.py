@@ -72,7 +72,7 @@ def get_array_stats(array, stretch):
     gc.collect()
     #Standard Deviation takes a few seconds to calculate.  Skip it if you do not need it. Worse - numpy.std makes an in memory copy of the array...
     try:
-        if stretch.__name__ == 'standard_deviation_stretch' or 'gaussian_stretch':
+        if stretch.func_name() == 'standard_deviation_stretch' or 'gaussian_stretch':
             #TODO Look at fast implementations of the Welford Algorithm
             std = array.std()
             stats['standard_deviation'] = float(std)
@@ -92,7 +92,8 @@ def get_band_stats(band):
     Returns a dictionary with bandmin, bandmax, bandstd, ndv.
     '''
 
-    stat = band.GetStatistics(False, True)
+    # These should be estimated band stats.
+    stat = band.GetStatistics(True, True)
     ndv = band.GetNoDataValue()
     stats = {'bandmin' : stat[0],
           'bandmax' : stat[1],

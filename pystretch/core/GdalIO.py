@@ -9,22 +9,34 @@ from osgeo import gdal
 DefaultNDVLookup={'Byte':255, 'UInt16':65535, 'Int16':-32767, 'UInt32':4294967293, 'Int32':-2147483647, 'Float32':1.175494351E-38, 'Float64':1.7976931348623158E+308}
 
 
-class GdalIO(object):
-    
+def create_output(driverformat, outputname,
+                    xsize,ysize,bands,projection,
+                    geotransform, dtype):
+
+    """
+    Method to create an output of the same type, size,
+    projection, and transformation as the input dataset
+    """
+    driver = gdal.GetDriverByName(driverformat)
+    outdataset = driver.Create(outputname, xsize, ysize, bands,dtype)
+    outdataset.SetProjection(projection)
+    outdataset.SetGeoTransform(geotransform)
+
+    return outdataset
+
+class OpenDataSet(object):
+
     def __init__(self, inputdataset):
         """Method docstring"""
         self.inputds = inputdataset
-    
+
     def load(self):
         """Method to open any GDAL supported raster dataset"""
 
         #Open the dataset read only using GDAL
         dataset = gdal.Open(self.inputds, gdal.GA_ReadOnly)
-        
-        return dataset
-    
 
-            #print "Failed to open %s. Is it a GDAL supported format?" %(self.inputds)
+        return dataset
 
     def info(self,dataset):
         xsize = dataset.RasterXSize
@@ -32,22 +44,7 @@ class GdalIO(object):
         bands = dataset.RasterCount
         projection = dataset.GetProjection()
         geotransform = dataset.GetGeoTransform()
-        
+
         return xsize, ysize, bands, projection, geotransform
-    
-    def create_output(self,driverformat, outputname,xsize,ysize,bands,projection, geotransform, dtype):
 
-        """Method to create an output of the same type, size, projection, and transformation as the input dataset"""
 
-        if not outputname:
-            outputname = "output.tif"
-            
-        if not driverformat:
-            driverFormat = 'Gtiff'
-
-        driver = gdal.GetDriverByName(driverFormat)
-        outdataset = driver.Create(outputname, xsize, ysize, bands,dtype)
-        outdataset.SetProjection(projection)
-        outdataset.SetGeoTransform(geotransform)
-        
-        return outdataset
