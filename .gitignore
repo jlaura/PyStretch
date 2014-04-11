@@ -9,6 +9,10 @@ dist/
 
 #TestData
 test/
+testimages
+
+*.tif
+*.tiff
 
 #Bookkeeping#
 #############
