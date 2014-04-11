@@ -54,7 +54,7 @@ def argparse_arguments():
     parser.add_argument('-o', '--output', dest='output', default='output.tif', action='store', type=str, help='The output file')
     parser.add_argument('--cores', dest='ncores', type=int, help='The number of cores to use. Defaults to all cores.')
     parser.add_argument('-f', '--format',action='store',type=str,default='GTiff', dest="outputformat" ,help='Any GDAL supported output format. (Default: GTiff)')
-    parser.add_argument('--ot', action='store', type=str, dest='dtype',default='GTiff', help='A GDAL output format. (Byte, Int16, Float32 are likely candidates.' )
+    parser.add_argument('--ot', action='store', type=str, dest='dtype',default='Byte', help='A GDAL output format. (Byte, Int16, Float32 are likely candidates.' )
     parser.add_argument('--NDV', action='store', dest='ndv', type=float, help='Define an output NDV.  If the dataset has an NDV, this value and the intrinsic NDV are set to No Data in the output.  The output NDV is this value.')
     parser.add_argument('--scale','-s', action='store', dest='scale',nargs=2, type=str, help='Scale the data to 8-bit')
     parser.add_argument('-r', '--horizontal', action='store', dest='horizontal_segments', type=int, help='Number of horizontal segments')
