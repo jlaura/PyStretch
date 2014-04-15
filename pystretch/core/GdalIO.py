@@ -18,7 +18,7 @@ def create_output(driverformat, outputname,
     projection, and transformation as the input dataset
     """
     driver = gdal.GetDriverByName(driverformat)
-    outdataset = driver.Create(outputname, xsize,ysize,bands,dtype)
+    outdataset = driver.Create(outputname, xsize,ysize,bands,dtype, options = [ 'COMPRESS=LZW' ])
     outdataset.SetProjection(projection)
     outdataset.SetGeoTransform(geotransform)
 

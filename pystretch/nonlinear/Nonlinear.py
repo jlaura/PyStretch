@@ -1,11 +1,13 @@
-import numpy
-import scipy.stats
+import numpy as np
+import pystretch.core.globalarr as glb
 
-def gamma_stretch(shared_array, i, **kwargs):
-    gammavalue = kwargs['gammavalue']
-    bandmax = kwargs['bandmax']
-    shared_array[i] **= (1.0/gammavalue)
-    shared_array[i] *= bandmax
+
+def gamma_stretch(i, kwargs):
+    """
+    Perform a gamma stretch raising all pixels to 1/epsilon.
+    """
+    glb.sharedarray[i] = np.power(glb.sharedarray[i], 1.0 / kwargs['gamma'])
+    glb.sharedarray[i] *= kwargs['maximum']
 
 def histequ_stretch(shared_array, i, **kwargs):
     cdf = kwargs['cdf']

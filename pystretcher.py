@@ -5,6 +5,8 @@ from pystretch.core import OptParse, Stats, Timer
 from pystretch.core.GdalIO import OpenDataSet, create_output
 from pystretch.masks import Segment
 import pystretch.core.globalarr as glb
+from pystretch.core import maskndv
+
 
 #Debugging imports
 #import profile
@@ -121,7 +123,6 @@ def main(args):
 
     #Get some info about the machine for mp
     cores = args['ncores']
-    print cores
     if cores is None:
         cores = mp.cpu_count()
 
@@ -152,7 +153,6 @@ def main(args):
         segments = [(0,0,xsize, ysize)]
 
     carray_dtype = _gdal_to_ctypes[banddtype]
-
     #Preallocate a sharedmem array of the correct size
     ctypesxsize, ctypesysize= segments[0][2:]
     carray = mp.RawArray(carray_dtype, ctypesxsize * ctypesysize)
@@ -167,30 +167,30 @@ def main(args):
 
         for i, chunk in enumerate(segments):
             xstart, ystart, intervalx, intervaly = chunk
-            print "Reading to buffer is doubling memory usage...why?"
             #Read the array into the buffer
             glb.sharedarray[:] = band.ReadAsArray(xstart, ystart, intervalx, intervaly)
-
             #If the input has an NDV - mask it.
             if stats['ndv'] != None:
                 glb.sharedarray = np.ma.masked_equal(glb.sharedarray, stats['ndv'], copy=False)
+                mask = np.ma.getmask(glb.sharedarray)
             if args['statsper'] is True:
                 args.update(Stats.get_array_stats(glb.sharedarray, stretch))
 
             #Determine the decomposition for each core
-            step = glb.sharedarray.shape[1] // cores
-            starts = range(xstart, xsize, step)
+            step = glb.sharedarray.shape[0] // cores
+            starts = range(ystart, ysize, step)
 
             stops = starts[1:]
-            stops.append(xsize-1)
+            stops.append(ysize-1)
             offsets = zip(starts, stops)
-
             for o in offsets:
-                res = pool.apply_async(stretch, args=(o, args))
+                res = pool.apply_async(stretch, args=(slice(o[0], o[1]), args))
 
             res.wait()
             res.get()
-            print "Checking", np.min(glb.sharedarray), np.max(glb.sharedarray)
+
+
+
             """
 
             #Calculate the hist and cdf if we need it.  This way we do not calc it per core.
@@ -229,7 +229,6 @@ def main(args):
             Stats.setnodata(shared_arr, options['ndv'])
             """
             #Write the output
-            output.GetRasterBand(j+1).WriteArray(glb.sharedarray, xstart,ystart)
 
             """
             #Manually cleanup to stop memory leaks.
@@ -240,12 +239,14 @@ def main(args):
                 pass
             globals()['shared_arr'] = None
             gc.collect()
-
-            if options['ndv'] != None:
-                output.GetRasterBand(b+1).SetNoDataValue(float(options['ndv']))
-            elif options['ndv_band'] != None:
-                output.GetRasterBand(b+1).SetNoDataValue(float(options['ndv_band']))
             """
+            if args['ndv'] != None:
+                glb.sharedarray[mask] = args['ndv']
+                output.GetRasterBand(j+1).SetNoDataValue(float(args['ndv']))
+
+
+
+            output.GetRasterBand(j+1).WriteArray(glb.sharedarray, xstart,ystart)
 
 
     Timer.totaltime(starttime)

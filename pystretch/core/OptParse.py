@@ -5,17 +5,59 @@ from pystretch.nonlinear import Nonlinear
 from pystretch.filter import Filter
 from pystretch.custom import Custom
 
-functions = {'sigma':Linear.standard_deviation_stretch, 'minmax':Linear.minmax_stretch,
-             'clip':Linear.clip_stretch, 'inverse':Linear.inverse_stretch,
-             'binary_pivot':Linear.binary_stretch, 'hicut_pivot':Linear.binary_stretch,
+
+#Dict of functions available to the user
+functions = {}
+
+linearfunctions = {'sigma':Linear.standard_deviation_stretch, 'minmax':Linear.minmax_stretch,
+             'clip':Linear.clip_stretch, 'inverse_stretch':Linear.inverse_stretch,
+             'binary_pivot':Linear.binary_stretch, 'hicut_pivot':Linear.hicut_stretch,
              'lowcut_pivot':Linear.lowcut_stretch}
 
+nonlinearfunctions = {'gamma':Nonlinear.gamma_stretch}
+
+functions.update(linearfunctions)
+functions.update(nonlinearfunctions)
+
+
 def argget_stretch(args):
+    """
+    Parse the flag name as a key in the functions dict
+    and return the value.  Value is the function to be called.
+    """
     for k, v in args.iteritems():
         if v != None and k in functions.keys():
             return functions[k]
 
+
+def global_args(parser):
+    """
+    Append the tool specific parser with the global parsing options.  This provides
+    functionality where the subparser argument is always first, followed by the
+    global arguments and local arguments.
+    """
+    parser.add_argument('input', help='The input image file.')
+    parser.add_argument('-o', '--output', dest='output', default='output.tif', action='store', type=str, help='The output file')
+    parser.add_argument('--cores', dest='ncores', type=int, help='The number of cores to use. Defaults to all cores.')
+    parser.add_argument('-f', '--format',action='store',type=str,default='GTiff', dest="outputformat" ,help='Any GDAL supported output format. (Default: GTiff)')
+    parser.add_argument('--ot', action='store', type=str, dest='dtype',default='Byte', help='A GDAL output format. (Byte, Int16, Float32 are likely candidates.' )
+    parser.add_argument('--NDV', action='store', dest='ndv', type=float, help='Define an output NDV.  If the dataset has an NDV, this value and the intrinsic NDV are set to No Data in the output.  The output NDV is this value.')
+    parser.add_argument('--scale','-s', action='store', dest='scale',nargs=2, type=str, help='Scale the data to 8-bit')
+    parser.add_argument('-r', '--horizontal', action='store', dest='horizontal_segments', type=int, help='Number of horizontal segments')
+    parser.add_argument('-e', '--vertical', action='store', dest='vertical_segments', type=int, help='Number of vertical segments')
+    parser.add_argument('-p', '--statsper', action='store_true', dest='statsper', help='Flag to compute statistics and apply a stretch per segment')
+    return parser
+
+
 def argparse_arguments():
+    """
+    Subparsers that provide a github style parsing experience to the user.
+    All subparsers make calls to global_args to prepend the argument list with
+    the global args.  This is done to avoid complex positional argument issues
+    where the subparser commands, including the subparser name, must be preceeded
+    by the global argument lists.
+    """
+
     desc='''A parallel raster image processing library that supports datasets larger than available RAM.'''
     usg = "Usage"
 
@@ -24,6 +66,7 @@ def argparse_arguments():
     subparser = parser.add_subparsers(help='Subcommand Help')
     #Linear
     parser_linear = subparser.add_parser('linear', help='Perform a linear stretch: Standard Deviation, MinMax, Clip, Inverse, Binary, Low Cut, High Cut')
+    parser_linear = global_args(parser_linear)
     parser_linear.add_argument('-d', '--std', dest='sigma', help='Perform a standard deviation stretch with some sigma', type=float)
     parser_linear.add_argument('-m', '--minmax', nargs=2, dest='minmax', type=int, help='Stretch the image to a given mininum and maximum')
     parser_linear.add_argument('-c', '--clip', type=float, dest='clip', help='A percentage to clip both ends of the histogram for stretching')
@@ -34,9 +77,10 @@ def argparse_arguments():
 
     #Nonlinear
     parser_nonlinear = subparser.add_parser('nonlinear', help='Perform a nonlinear stretch: Gamma, Histogram Equalization, Logarithmic')
-    parser_nonlinear.add_argument('-g', '--gamma', dest='gamma_stretch', type=float, help='Gamma stretch with a given epsilon')
+    parser_nonlinear = global_args(parser_nonlinear)
+    parser_nonlinear.add_argument('-g', '--gamma', dest='gamma', type=float, help='Gamma stretch with a given epsilon')
     parser_nonlinear.add_argument('-q', '--histogramequalization', dest='histequ_bins',type=int, default=128, help='Perform a histogram equalization with the defined number of bins')
-    parser_nonlinear.add_argument('--log', '-r', dest='logarithmic_epsilon', type=float, default=1, help='Performs a logrithmic stretch with a given epsilon.  (Default: e=1. This is most likely appropriate for images with magnitudes typically much larger than 1.).')
+    parser_nonlinear.add_argument('--log', '-l', dest='logarithmic_epsilon', type=float, default=1, help='Performs a logrithmic stretch with a given epsilon.  (Default: e=1. This is most likely appropriate for images with magnitudes typically much larger than 1.).')
 
     #Convolution
     parser_convolve = subparser.add_parser('convolve', help='Perform a convolution: Laplacian, High Pass, Gaussian, Gaussian High Pass, Mean, Conservative, Median ')
@@ -48,18 +92,6 @@ def argparse_arguments():
     parser_convolve.add_argument('--meanfilter', '--mf', action='store_true', default=False, dest='mean_filter', help ='Perform mean filter.')
     parser_convolve.add_argument('--conservativefilter', '--cf', action='store_true', default=False, dest='conservative_filter', help='Perform a conservative filter.')
     parser_convolve.add_argument('--median', '--md', action='store_true', default=False, dest='median_filter', help='Perform a median filtering of the input image with a 3x3 kernel.')
-
-    #Global
-    parser.add_argument('input', help='The input image file.')
-    parser.add_argument('-o', '--output', dest='output', default='output.tif', action='store', type=str, help='The output file')
-    parser.add_argument('--cores', dest='ncores', type=int, help='The number of cores to use. Defaults to all cores.')
-    parser.add_argument('-f', '--format',action='store',type=str,default='GTiff', dest="outputformat" ,help='Any GDAL supported output format. (Default: GTiff)')
-    parser.add_argument('--ot', action='store', type=str, dest='dtype',default='Byte', help='A GDAL output format. (Byte, Int16, Float32 are likely candidates.' )
-    parser.add_argument('--NDV', action='store', dest='ndv', type=float, help='Define an output NDV.  If the dataset has an NDV, this value and the intrinsic NDV are set to No Data in the output.  The output NDV is this value.')
-    parser.add_argument('--scale','-s', action='store', dest='scale',nargs=2, type=str, help='Scale the data to 8-bit')
-    parser.add_argument('-r', '--horizontal', action='store', dest='horizontal_segments', type=int, help='Number of horizontal segments')
-    parser.add_argument('-e', '--vertical', action='store', dest='vertical_segments', type=int, help='Number of vertical segments')
-    parser.add_argument('-p', '--statsper', action='store_true', dest='statsper', help='Flag to compute statistics and apply a stretch per segment')
 
     return vars(parser.parse_args())
 

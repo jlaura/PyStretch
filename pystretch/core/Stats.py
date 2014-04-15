@@ -95,11 +95,11 @@ def get_band_stats(band):
     # These should be estimated band stats.
     stat = band.GetStatistics(True, True)
     ndv = band.GetNoDataValue()
-    stats = {'bandmin' : stat[0],
-          'bandmax' : stat[1],
-          'bandmean' : stat[2],
-          'bandstd' : stat[3],
-          'ndv_band' : ndv
+    stats = {'minimum' : stat[0],
+          'maximum' : stat[1],
+          'mean' : stat[2],
+          'standard_deviation' : stat[3],
+          'ndv' : ndv
           }
     return stats
 

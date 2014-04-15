@@ -2,65 +2,77 @@ import numpy as np
 import pystretch.core.globalarr as glb
 
 def minmax_stretch( i, kwargs):
+    """
+    Rescale image pixels between a user defined minimum and maximum
+    """
     minimum = kwargs['minimum']
     maximum = kwargs['maximum']
     a = kwargs['minmax'][0]
     b = kwargs['minmax'][1]
-    mask = np.where(glb.sharedarray[:, i[0]:i[1]] == kwargs['ndv'])
-    glb.sharedarray[:, i[0]:i[1]] = (b-a) * (glb.sharedarray[:, i[0]:i[1]]  - minimum) / (maximum - minimum) + a
-    glb.sharedarray[mask] = kwargs['ndv']
-    print np.min(glb.sharedarray), np.max(glb.sharedarray)
 
+    glb.sharedarray[i] = (b-a) * (glb.sharedarray[i]  - minimum) / (maximum - minimum) + a
 
-def linear_stretch(shared_array, i,**kwargs):
+def clip_stretch(i,kwargs):
+    """
+    Recale image pixels between a minimum and maximum defined as some percentage from
+    the existing minimum and maximum.
+    """
     clip = kwargs['clip']
     minimum = kwargs['minimum']
     maximum = kwargs['maximum']
-    newmin = minimum * ((100.0-clip)/100.0)
-    newmax = maximum * ((100.0-clip)/100.0)
-    #arr = shared_array.asarray()
-    shared_array[i] -= newmin
-    shared_array[i] *=((newmax - newmin)/(maximum-minimum)) + newmin
+    a = minimum * ((100.0-clip)/100.0)
+    b = maximum * ((100.0-clip)/100.0)
+
+    glb.sharedarray[i] = (b-a) * (glb.sharedarray[i]  - minimum) / (maximum - minimum) + a
 
 def standard_deviation_stretch(i, kwargs):
-    print "a"
+    """
+    Rescale image pixels between a minimum and maximum defined by some number
+    of standard deviation from the mean.
+    """
     array_mean = kwargs['mean']
     array_standard_deviation = kwargs['standard_deviation']
     sigma = kwargs['sigma']
     newmin = array_mean - (array_standard_deviation * sigma)
     newmax = array_mean + (array_standard_deviation * sigma)
-    #arr = shared_array.asarray()
-    glb.sharedarray[i] -= newmin
-    glb.sharedarray[i] *= 1.0/(newmax-newmin)
 
-def inverse_stretch(shared_array, i, **kwargs):
+    glb.sharedarray[i] -= newmin
+    glb.sharedarray[i] *= kwargs['maximum']/(newmax-newmin)
+
+def inverse_stretch(i, kwargs):
+    """
+    Invert an image by subtracting the maximum and the adding
+    the minimum to the absolute value of the image.
+    """
     maximum = kwargs['maximum']
     minimum = kwargs['minimum']
-    shared_array[i] -= maximum
-    shared_array[i] = abs(shared_array[i]) + minimum
+    glb.sharedarray[i] -= maximum
+    glb.sharedarray[i] = abs(glb.sharedarray[i]) + minimum
 
-def binary_stretch(shared_array, i, **kwargs):
-    threshold = kwargs['threshold']
-    #Normalize the threshold value because we normalized our data
-    threshold = (threshold - kwargs['bandmin'])/(kwargs['bandmax']-kwargs['bandmin'])
-    low_value_index = shared_array[i] < threshold
-    shared_array[i][low_value_index] = 0.0
-    high_value_index = shared_array[i] > threshold
-    shared_array[i][high_value_index] = 255.0
+def binary_stretch(i, kwargs):
+    """
+    Reclassify an image with all values greater than the pivot
+    set to the image maximum and all values less than or equal
+    to the pivot set to the minimum.
+    """
+    threshold = kwargs['binary_pivot']
+    low_value_index = glb.sharedarray[i] < threshold
+    glb.sharedarray[i][low_value_index] = kwargs['minimum']
+    high_value_index = glb.sharedarray[i] >= threshold
+    glb.sharedarray[i][high_value_index] = kwargs['maximum']
 
-def hicut_stretch(shared_array, i, **kwargs):
-    threshold = kwargs['cutvalue']
-    threshold = (threshold - kwargs['bandmin'])/(kwargs['bandmax']-kwargs['bandmin'])
-    high_value_index = shared_array[i] > threshold
-    shared_array[i][high_value_index] = kwargs['cutvalue']
+def hicut_stretch(i, kwargs):
+    """
+    Reclassify an image with all values greater than the pivot
+    set the the image maximum.  All other pixels are unchanged.
+    """
+    high_value_index = glb.sharedarray[i] > kwargs['hicut_pivot']
+    glb.sharedarray[i][high_value_index] = kwargs['maximum']
 
-def lowcut_stretch(shared_array, i, **kwargs):
-    threshold = kwargs['cutvalue']
-    threshold = (threshold - kwargs['bandmin'])/(kwargs['bandmax']-kwargs['bandmin'])
-    low_value_index = shared_array[i] < threshold
-    shared_array[i][low_value_index] = kwargs['cutvalue']
-
-
-
-def clip_stretch(shared_array, i, **kwargs):
-    pass
+def lowcut_stretch(i, kwargs):
+    """
+    Reclassify an image with all values less than the pivot
+    set to the image minimum.  All other pixels are unchanged
+    """
+    low_value_index = glb.sharedarray[i] < kwargs['lowcut_pivot']
+    glb.sharedarray[i][low_value_index] = kwargs['minimum']
