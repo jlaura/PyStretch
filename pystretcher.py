@@ -96,12 +96,12 @@ def segment_image(xsize, ysize, xsegment, ysegment):
     ystart = 0
     output = []
     for y in xrange(0, ysize, intervaly):
-        if y + intervaly * 2 <= ysize:
+        if y + intervaly <= ysize:
             numberofrows = intervaly
         else:
             numberofrows = ysize - y
         for x in xrange(0, xsize, intervalx):
-            if x + intervalx * 2 <= xsize:
+            if x + intervalx <= xsize:
                 numberofcolumns = intervalx
             else:
                 numberofcolumns = xsize - x
@@ -167,8 +167,11 @@ def main(args):
 
         for i, chunk in enumerate(segments):
             xstart, ystart, intervalx, intervaly = chunk
+
             #Read the array into the buffer
-            glb.sharedarray[:] = band.ReadAsArray(xstart, ystart, intervalx, intervaly)
+            print intervalx, intervaly
+            glb.sharedarray[:intervaly, :intervalx] = band.ReadAsArray(xstart, ystart, intervalx, intervaly)
+
             #If the input has an NDV - mask it.
             if stats['ndv'] != None:
                 glb.sharedarray = np.ma.masked_equal(glb.sharedarray, stats['ndv'], copy=False)
@@ -246,7 +249,7 @@ def main(args):
 
 
 
-            output.GetRasterBand(j+1).WriteArray(glb.sharedarray, xstart,ystart)
+            output.GetRasterBand(j+1).WriteArray(glb.sharedarray[:intervaly, :intervalx], xstart,ystart)
 
 
     Timer.totaltime(starttime)

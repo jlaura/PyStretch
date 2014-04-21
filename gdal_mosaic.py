@@ -14,11 +14,17 @@ import numpy as np
 
 import matplotlib.pyplot as plt
 
-laplacian_kernel = CustomKernel(np.array([[0,1,0],[1,-4,1],[0,1,0]]))
-
-
+#from astropy.convolution import convolve
+from scipy.ndimage import convolve
 verbose = 1
 quiet = 1
+
+import pyximport
+pyximport.install(reload_support=True, setup_args={"include_dirs": np.get_include()})
+import mosaic
+
+
+
 def names_to_fileinfos( names ):
     """
     Translate a list of GDAL filenames, into file_info objects.
@@ -339,12 +345,9 @@ def main(names):
             if outfi == infi:
                 continue
             intersection = checkforintersection(infi, outfi)
-            if intersection:
+            if intersection != 1:
                 intersections.update(intersection)
         files_to_check.remove(outfi)
-
-
-    print len(intersections)
 
     #TODO: This is naive, in that we know the number of intersections per image is 1
     # In a real implementation, we would need to generate a tree and iterate
@@ -357,25 +360,52 @@ def main(names):
         fhb = k[1].fh
 
         #Differentiate using Laplcian - this could be Sobel as well - this is approximate
+        dest = fhb.GetRasterBand(1).ReadAsArray(v[1][0], v[1][1], v[1][2], v[1][3]).astype(np.float32)
         src = fha.GetRasterBand(1).ReadAsArray(v[0][0], v[0][1], v[0][2], v[0][3])
+        #Get the indices of valid data in the source and the destination.
+        #Source indices are the mask
+
+        validsrc = np.nonzero(src)
+        validdest = np.nonzero(dest)
+        n = len(validsrc[0])
+
+        src = src.astype(np.float32)
         src = np.ma.masked_equal(src, nodata, copy=False)
-        #TODO: This needs to be a custom convolution - use cython - in order to support NaN.
-        srclap = convolve(src,laplacian_kernel, mode='nearest')
-        #Delta I
+        np.ma.set_fill_value(src, np.nan)
+        srclap = convolve(src, np.array([[0,-1,0],[-1, 4, -1],[0, -1, 0]]))
+
+        """
         #Plot the src and the laplacian (2nd derivative)
-        plt.subplot(1,2,1)
+        lt.subplot(1,2,1)
         plt.imshow(src, cmap='gray')
         plt.subplot(1,2,2)
         plt.imshow(srclap, cmap='gray')
         plt.show()
-        exit()
+        """
         #Blend
         #Ax = b
-        A = fhb.GetRasterBand(1).ReadAsArray(v[1][0], v[1][1], v[1][2], v[1][3])
-        A = np.ma.masked_equal(A, nodata, copy=False)
+        imidx, count = mosaic.idxarr(src)
+        #Compute A and b
+        A, b = mosaic.genAb(src, srclap, imidx, dest, n)
+        sol = np.linalg.solve(A, b)
+        print np.amin(sol), np.amax(sol), np.std(sol)
 
-        #Reintegrate
+        print "A Generated.  Solving..."
+        print "Solved.  Recreating the matrix..."
+        exit()
+        for x in range(xsize-1):
+            for y in range(ysize-1):
+                if src[y, x] != 0.0:
+                    idx = imidx[y,x]
+                    print y, x, sol[idx]
+                    dest[y,x] = sol[idx]
 
+        return dest
+
+
+        #Solve
+        plt.imshow(img, cmap='gray')
+        plt.show()
         exit()
     return
     #Iterate through all of the input images and begin to merge them.
