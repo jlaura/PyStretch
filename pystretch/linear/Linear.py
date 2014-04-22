@@ -30,8 +30,13 @@ def standard_deviation_stretch(i, kwargs):
     Rescale image pixels between a minimum and maximum defined by some number
     of standard deviation from the mean.
     """
-    array_mean = kwargs['mean']
-    array_standard_deviation = kwargs['standard_deviation']
+
+    if kwargs['byline'] is True:
+        array_mean = glb.sharedarray[i].mean()
+        array_standard_deviation = glb.sharedarray[i].std()
+    else:
+        array_mean = kwargs['mean']
+        array_standard_deviation = kwargs['standard_deviation']
     sigma = kwargs['sigma']
     newmin = array_mean - (array_standard_deviation * sigma)
     newmax = array_mean + (array_standard_deviation * sigma)

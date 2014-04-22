@@ -134,15 +134,21 @@ def main(args):
                         geotransform, gdal.GetDataTypeByName(args['dtype']))
 
     #Intelligently segment the image based upon number of cores and intrinsic block size
-    if args['horizontal_segments'] is not None or args['vertical_segments'] is not None:
+    if args['byline'] is True:
+        segments = segment_image(xsize, ysize, 1, ysize)
+        args['statsper'] = True
+    elif args['horizontal_segments'] is not None or args['vertical_segments'] is not None:
         #The user is defining the segmentation
         segments = segment_image(xsize, ysize, args['vertical_segments'],args['horizontal_segments'])
     else:
         segments = [(0,0,xsize, ysize)]
 
     carray_dtype = _gdal_to_ctypes[banddtype]
+
     #Preallocate a sharedmem array of the correct size
     ctypesxsize, ctypesysize= segments[0][2:]
+    if args['byline'] is True:
+        ctypesysize = cores
     carray = mp.RawArray(carray_dtype, ctypesxsize * ctypesysize)
     glb.sharedarray = np.frombuffer(carray,dtype=_gdal_to_numpy[banddtype]).reshape(ctypesysize, ctypesxsize)
 
@@ -152,79 +158,56 @@ def main(args):
     for j,band in enumerate(bands):
         stats = bandstats[j]
         args.update(stats)
-        for i, chunk in enumerate(segments):
-            xstart, ystart, intervalx, intervaly = chunk
-            #Read the array into the buffer
-            glb.sharedarray[:intervaly, :intervalx] = band.ReadAsArray(xstart, ystart, intervalx, intervaly)
 
-            #If the input has an NDV - mask it.
-            if stats['ndv'] != None:
-                glb.sharedarray = np.ma.masked_equal(glb.sharedarray, stats['ndv'], copy=False)
-                mask = np.ma.getmask(glb.sharedarray)
-            if args['statsper'] is True:
-                args.update(Stats.get_array_stats(glb.sharedarray, stretch))
+        if args['byline'] is True:
+            for y in range(0, ysize, cores):
+                xstart, ystart, intervalx, intervaly = 0, y, xsize, cores
+                if ystart + intervaly > ysize:
+                    intervaly = ysize - ystart
+                glb.sharedarray[:intervaly, :intervalx] = band.ReadAsArray(xstart, ystart, intervalx, intervaly)
+                #If the input has an NDV - mask it.
+                if stats['ndv'] != None:
+                    glb.sharedarray = np.ma.masked_equal(glb.sharedarray, stats['ndv'], copy=False)
+                    mask = np.ma.getmask(glb.sharedarray)
+                if args['statsper'] is True:
+                    args.update(Stats.get_array_stats(glb.sharedarray, stretch))
+                for i in range(cores):
+                    res = pool.apply(stretch, args=(slice(i, i+1), args))
 
-            #Determine the decomposition for each core
+                if args['ndv'] != None:
+                    glb.sharedarray[mask] = args['ndv']
+                    output.GetRasterBand(j+1).SetNoDataValue(float(args['ndv']))
 
-            step = intervaly // cores
+                output.GetRasterBand(j+1).WriteArray(glb.sharedarray[:intervaly, :intervalx], xstart,ystart)
 
-            starts = range(0, intervaly+1, step)
-            stops = starts[1:]
-            stops.append(intervaly+1)
-            offsets = zip(starts, stops)
-            for o in offsets:
-                res = pool.apply(stretch, args=(slice(o[0], o[1]), args))
+                print "Processed {} or {} lines \r".format(y, ysize),
+                sys.stdout.flush()
 
+        #If not processing line by line, distirbuted the block over availabel cores
+        else:
+            for i, chunk in enumerate(segments):
+                xstart, ystart, intervalx, intervaly = chunk
+                #Read the array into the buffer
+                glb.sharedarray[:intervaly, :intervalx] = band.ReadAsArray(xstart, ystart, intervalx, intervaly)
 
-            """
+                #If the input has an NDV - mask it.
+                if stats['ndv'] != None:
+                    glb.sharedarray = np.ma.masked_equal(glb.sharedarray, stats['ndv'], copy=False)
+                    mask = np.ma.getmask(glb.sharedarray)
+                if args['statsper'] is True:
+                    args.update(Stats.get_array_stats(glb.sharedarray, stretch))
 
-            #Calculate the hist and cdf if we need it.  This way we do not calc it per core.
-            if options['histequ_stretch'] == True:
-                cdf, bins = Stats.gethist_cdf(array,options['num_bins'])
-                options['cdf'] = cdf
-                options['bins'] = bins
+                #Determine the decomposition for each core
 
+                step = intervaly // cores
 
-            step = y // cores
-            jobs = []
-            if step != 0:
-                for i in range(0,y,step):
-                    p = mp.Process(target=stretch,args= (shared_arr,slice(i, i+step)),kwargs=options)
-                    jobs.append(p)
+                starts = range(0, intervaly+1, step)
+                stops = starts[1:]
+                stops.append(intervaly+1)
+                offsets = zip(starts, stops)
+                for o in offsets:
+                    res = pool.apply(stretch, args=(slice(o[0], o[1]), args))
 
-                for job in jobs:
-                    job.start()
-                    del job
-                for job in jobs:
-                    job.join()
-                    del job
-
-            #Return the array to the proper data range and write it out.  Scale if that is what the user wants
-            if options['histequ_stretch'] or options['gamma_stretch']== True:
-                pass
-            elif 'filter' in stretch.__name__:
-                pass
-            else:
-                Stats.denorm(shared_arr, dtype, kwargs=options)
-
-            if options['scale'] != None:
-                Stats.scale(shared_arr, kwargs=options)
-
-            #If their are NaN in the array replace them with the dataset no data value
-            Stats.setnodata(shared_arr, options['ndv'])
-            """
-            #Write the output
-
-            """
-            #Manually cleanup to stop memory leaks.
-            del array, jobs, shared_arr
-            try:
-                del stats
-            except Exception:
-                pass
-            globals()['shared_arr'] = None
-            gc.collect()
-            """
             if args['ndv'] != None:
                 glb.sharedarray[mask] = args['ndv']
                 output.GetRasterBand(j+1).SetNoDataValue(float(args['ndv']))
