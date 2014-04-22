@@ -63,18 +63,6 @@ _ctypes_to_np = {
 }
 
 
-def standard_deviation_stretch(i, kwargs):
-
-    array_mean = kwargs['mean']
-    array_standard_deviation = kwargs['standard_deviation']
-    sigma = kwargs['sigma']
-    newmin = array_mean - (array_standard_deviation * sigma)
-    newmax = array_mean + (array_standard_deviation * sigma)
-
-    #arr = shared_array.asarray()
-    sharedarray[i] -= newmin
-    sharedarray[i] *= 1.0/(newmax-newmin)
-
 
 def segment_image(xsize, ysize, xsegment, ysegment):
     """Function to segment the images into a user defined number of sections
@@ -164,12 +152,9 @@ def main(args):
     for j,band in enumerate(bands):
         stats = bandstats[j]
         args.update(stats)
-
         for i, chunk in enumerate(segments):
             xstart, ystart, intervalx, intervaly = chunk
-
             #Read the array into the buffer
-            print intervalx, intervaly
             glb.sharedarray[:intervaly, :intervalx] = band.ReadAsArray(xstart, ystart, intervalx, intervaly)
 
             #If the input has an NDV - mask it.
@@ -180,18 +165,15 @@ def main(args):
                 args.update(Stats.get_array_stats(glb.sharedarray, stretch))
 
             #Determine the decomposition for each core
-            step = glb.sharedarray.shape[0] // cores
-            starts = range(ystart, ysize, step)
 
+            step = intervaly // cores
+
+            starts = range(0, intervaly+1, step)
             stops = starts[1:]
-            stops.append(ysize-1)
+            stops.append(intervaly+1)
             offsets = zip(starts, stops)
             for o in offsets:
-                res = pool.apply_async(stretch, args=(slice(o[0], o[1]), args))
-
-            res.wait()
-            res.get()
-
+                res = pool.apply(stretch, args=(slice(o[0], o[1]), args))
 
 
             """
@@ -247,18 +229,15 @@ def main(args):
                 glb.sharedarray[mask] = args['ndv']
                 output.GetRasterBand(j+1).SetNoDataValue(float(args['ndv']))
 
-
-
             output.GetRasterBand(j+1).WriteArray(glb.sharedarray[:intervaly, :intervalx], xstart,ystart)
-
 
     Timer.totaltime(starttime)
 
     #Close up
     dataset = None
     output = None
-    gc.collect()
-
+    pool.close()
+    pool.join()
 def init(shared_arr_):
     global sharedarray
     sharedarray = shared_arr_ # must be inhereted, not passed as an argument global array

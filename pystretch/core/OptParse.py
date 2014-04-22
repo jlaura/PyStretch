@@ -70,7 +70,7 @@ def argparse_arguments():
     parser_linear.add_argument('-d', '--std', dest='sigma', help='Perform a standard deviation stretch with some sigma', type=float)
     parser_linear.add_argument('-m', '--minmax', nargs=2, dest='minmax', type=int, help='Stretch the image to a given mininum and maximum')
     parser_linear.add_argument('-c', '--clip', type=float, dest='clip', help='A percentage to clip both ends of the histogram for stretching')
-    parser_linear.add_argument('-i', '--inverse', action='store_true', dest='inverse_stretch', help='Perform an inverse stretch')
+    parser_linear.add_argument('-i', '--inverse', type=float, dest='inverse_pivot', help='Perform an inverse stretch')
     parser_linear.add_argument('-y', '--binary', type=float, dest='binary_pivot', help='Performs a binary stretch at a given value.')
     parser_linear.add_argument('--hicut', type=float, dest='hicut_pivot', help='Set all values above the cut to the maximum.')
     parser_linear.add_argument('--lowcut',type=float, dest='lowcut_pivot', help='Set all vlues below the cut to the minimum.')

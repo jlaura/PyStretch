@@ -38,7 +38,6 @@ def standard_deviation_stretch(i, kwargs):
 
     glb.sharedarray[i] -= newmin
     glb.sharedarray[i] *= kwargs['maximum']/(newmax-newmin)
-
 def inverse_stretch(i, kwargs):
     """
     Invert an image by subtracting the maximum and the adding
