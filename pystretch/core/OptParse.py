@@ -47,6 +47,7 @@ def global_args(parser):
     parser.add_argument('-e', '--vertical', action='store', dest='vertical_segments', type=int, help='Number of vertical segments')
     parser.add_argument('-p', '--statsper', action='store_true', dest='statsper', help='Flag to compute statistics and apply a stretch per segment')
     parser.add_argument('--byline', action='store_true',dest='byline', help='Apply a stretch by line')
+    parser.add_argument('--bycolumn', action='store_true', dest='bycolumn', help='Apply stretch by column')
     return parser
 
 

@@ -137,6 +137,9 @@ def main(args):
     if args['byline'] is True:
         segments = segment_image(xsize, ysize, 1, ysize)
         args['statsper'] = True
+    elif args['bycolumn'] is True:
+        segments = segment_image(xsize, ysize, xsize, 1)
+        args['statsper'] = True
     elif args['horizontal_segments'] is not None or args['vertical_segments'] is not None:
         #The user is defining the segmentation
         segments = segment_image(xsize, ysize, args['vertical_segments'],args['horizontal_segments'])
@@ -149,6 +152,8 @@ def main(args):
     ctypesxsize, ctypesysize= segments[0][2:]
     if args['byline'] is True:
         ctypesysize = cores
+    elif args['bycolumn'] is True:
+        ctypesxsize = cores
     carray = mp.RawArray(carray_dtype, ctypesxsize * ctypesysize)
     glb.sharedarray = np.frombuffer(carray,dtype=_gdal_to_numpy[banddtype]).reshape(ctypesysize, ctypesxsize)
 
@@ -183,6 +188,30 @@ def main(args):
                 print "Processed {} or {} lines \r".format(y, ysize),
                 sys.stdout.flush()
 
+        elif args['bycolumn'] is True:
+            for x in range(0, xsize, cores):
+                xstart, ystart, intervalx, intervaly = x, 0, cores, ysize
+                if xstart + intervalx > xsize:
+                    intervalx = xsize - xstart
+
+                glb.sharedarray[:intervaly, :intervalx] = band.ReadAsArray(xstart, ystart, intervalx, intervaly)
+                #If the input has an NDV - mask it.
+                if stats['ndv'] != None:
+                    glb.sharedarray = np.ma.masked_equal(glb.sharedarray, stats['ndv'], copy=False)
+                    mask = np.ma.getmask(glb.sharedarray)
+                if args['statsper'] is True:
+                    args.update(Stats.get_array_stats(glb.sharedarray, stretch))
+                for i in range(cores):
+                    res = pool.apply(stretch, args=(slice(i, i+1), args))
+
+                if args['ndv'] != None:
+                    glb.sharedarray[mask] = args['ndv']
+                    output.GetRasterBand(j+1).SetNoDataValue(float(args['ndv']))
+
+                output.GetRasterBand(j+1).WriteArray(glb.sharedarray[:intervaly, :intervalx], xstart,ystart)
+
+                print "Processed {} or {} lines \r".format(x, xsize),
+                sys.stdout.flush()
         #If not processing line by line, distirbuted the block over availabel cores
         else:
             for i, chunk in enumerate(segments):

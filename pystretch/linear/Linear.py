@@ -26,14 +26,15 @@ def clip_stretch(i,kwargs):
     glb.sharedarray[i] = (b-a) * (glb.sharedarray[i]  - minimum) / (maximum - minimum) + a
 
 def standard_deviation_stretch(i, kwargs):
+    print i, glb.sharedarray[:,i].shape
     """
     Rescale image pixels between a minimum and maximum defined by some number
     of standard deviation from the mean.
     """
 
-    if kwargs['byline'] is True:
-        array_mean = glb.sharedarray[i].mean()
-        array_standard_deviation = glb.sharedarray[i].std()
+    if kwargs['byline'] is True or kwargs['bycolumn'] is True:
+        array_mean = glb.sharedarray[:,i].mean()
+        array_standard_deviation = glb.sharedarray[:,i].std()
     else:
         array_mean = kwargs['mean']
         array_standard_deviation = kwargs['standard_deviation']
@@ -41,8 +42,8 @@ def standard_deviation_stretch(i, kwargs):
     newmin = array_mean - (array_standard_deviation * sigma)
     newmax = array_mean + (array_standard_deviation * sigma)
 
-    glb.sharedarray[i] -= newmin
-    glb.sharedarray[i] *= kwargs['maximum']/(newmax-newmin)
+    glb.sharedarray[:,i] -= newmin
+    glb.sharedarray[:,i] *= kwargs['maximum']/(newmax-newmin)
 def inverse_stretch(i, kwargs):
     """
     Invert an image by subtracting the maximum and the adding
