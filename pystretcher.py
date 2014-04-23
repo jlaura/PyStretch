@@ -18,6 +18,9 @@ import sys
 import time
 import gc
 
+import numpy as np
+np.seterr(all='ignore')
+
 #External imports
 try:
     from osgeo import gdal
@@ -169,25 +172,27 @@ def main(args):
                 xstart, ystart, intervalx, intervaly = 0, y, xsize, cores
                 if ystart + intervaly > ysize:
                     intervaly = ysize - ystart
+                #print ystart, ystart + intervaly
+                #print y, ystart, ystart+ intervaly, intervaly
                 glb.sharedarray[:intervaly, :intervalx] = band.ReadAsArray(xstart, ystart, intervalx, intervaly)
                 #If the input has an NDV - mask it.
                 if stats['ndv'] != None:
                     glb.sharedarray = np.ma.masked_equal(glb.sharedarray, stats['ndv'], copy=False)
                     mask = np.ma.getmask(glb.sharedarray)
-                if args['statsper'] is True:
-                    args.update(Stats.get_array_stats(glb.sharedarray, stretch))
+                #if args['statsper'] is True:
+                    #args.update(Stats.get_array_stats(glb.sharedarray, stretch))
                 for i in range(cores):
                     res = pool.apply(stretch, args=(slice(i, i+1), args))
 
-                if args['ndv'] != None:
-                    glb.sharedarray[mask] = args['ndv']
-                    output.GetRasterBand(j+1).SetNoDataValue(float(args['ndv']))
 
+                if args['ndv'] != None:
+                    #glb.sharedarray[mask] = args['ndv']
+                    output.GetRasterBand(j+1).SetNoDataValue(float(args['ndv']))
                 output.GetRasterBand(j+1).WriteArray(glb.sharedarray[:intervaly, :intervalx], xstart,ystart)
 
-                print "Processed {} or {} lines \r".format(y, ysize),
-                sys.stdout.flush()
-
+                if args['quiet']:
+                    print "Processed {} or {} lines \r".format(y, ysize),
+                    sys.stdout.flush()
         elif args['bycolumn'] is True:
             for x in range(0, xsize, cores):
                 xstart, ystart, intervalx, intervaly = x, 0, cores, ysize
@@ -210,8 +215,9 @@ def main(args):
 
                 output.GetRasterBand(j+1).WriteArray(glb.sharedarray[:intervaly, :intervalx], xstart,ystart)
 
-                print "Processed {} or {} lines \r".format(x, xsize),
-                sys.stdout.flush()
+                if args['quiet']:
+                    print "Processed {} or {} lines \r".format(x, xsize),
+                    sys.stdout.flush()
         #If not processing line by line, distirbuted the block over availabel cores
         else:
             for i, chunk in enumerate(segments):

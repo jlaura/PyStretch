@@ -16,8 +16,15 @@ linearfunctions = {'sigma':Linear.standard_deviation_stretch, 'minmax':Linear.mi
 
 nonlinearfunctions = {'gamma':Nonlinear.gamma_stretch}
 
+filterfunctions = {'gaussian_filter':Filter.gaussian_filter, 'laplacian_filter':Filter.laplacian_filter,
+                   'mean_filter':Filter.mean_filter, 'conservative_filter':Filter.conservative_filter,
+                   'median_filter':Filter.median_filter, 'hipass_filter_5x5':Filter.hipass_filter_5x5,
+                   'hipass_filter_3x3':Filter.hipass_filter_3x3}
+
+
 functions.update(linearfunctions)
 functions.update(nonlinearfunctions)
+functions.update(filterfunctions)
 
 
 def argget_stretch(args):
@@ -25,9 +32,16 @@ def argget_stretch(args):
     Parse the flag name as a key in the functions dict
     and return the value.  Value is the function to be called.
     """
-    for k, v in args.iteritems():
-        if v != None and k in functions.keys():
-            return functions[k]
+    #Linear
+    if 'sigma' in args.keys():
+        for k, v in args.iteritems():
+            if v != None and k in functions.keys():
+                return functions[k]
+    if 'median_filter' in args.keys():
+        for k, v in args.iteritems():
+            if 'filter' in k:
+                if v:
+                    return functions[k]
 
 
 def global_args(parser):
@@ -48,6 +62,7 @@ def global_args(parser):
     parser.add_argument('-p', '--statsper', action='store_true', dest='statsper', help='Flag to compute statistics and apply a stretch per segment')
     parser.add_argument('--byline', action='store_true',dest='byline', help='Apply a stretch by line')
     parser.add_argument('--bycolumn', action='store_true', dest='bycolumn', help='Apply stretch by column')
+    parser.add_argument('-q', '--quiet', action='store_false', dest='quiet', help='Suppress output')
     return parser
 
 
@@ -81,11 +96,12 @@ def argparse_arguments():
     parser_nonlinear = subparser.add_parser('nonlinear', help='Perform a nonlinear stretch: Gamma, Histogram Equalization, Logarithmic')
     parser_nonlinear = global_args(parser_nonlinear)
     parser_nonlinear.add_argument('-g', '--gamma', dest='gamma', type=float, help='Gamma stretch with a given epsilon')
-    parser_nonlinear.add_argument('-q', '--histogramequalization', dest='histequ_bins',type=int, default=128, help='Perform a histogram equalization with the defined number of bins')
+    parser_nonlinear.add_argument('-u', '--histogramequalization', dest='histequ_bins',type=int, default=128, help='Perform a histogram equalization with the defined number of bins')
     parser_nonlinear.add_argument('--log', '-l', dest='logarithmic_epsilon', type=float, default=1, help='Performs a logrithmic stretch with a given epsilon.  (Default: e=1. This is most likely appropriate for images with magnitudes typically much larger than 1.).')
 
     #Convolution
     parser_convolve = subparser.add_parser('convolve', help='Perform a convolution: Laplacian, High Pass, Gaussian, Gaussian High Pass, Mean, Conservative, Median ')
+    parser_convolve = global_args(parser_convolve)
     parser_convolve.add_argument('--laplacian', '--lap', action='store_true', default=False, dest='laplacian_filter', help='Perform a laplacian filter.')
     parser_convolve.add_argument('--hipass3', '--hi3', action='store_true', default=False, dest='hipass_filter_3x3', help='Perform a hipass filter.')
     parser_convolve.add_argument('--hipass5', '--hi5', action='store_true', default=False, dest='hipass_filter_5x5', help='Perform a hipass filter.')
