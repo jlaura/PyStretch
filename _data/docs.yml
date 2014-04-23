@@ -1,0 +1,44 @@
+- title: Getting Started
+  docs:
+  - home
+  - quickstart
+  - installation
+  - usage
+
+- title: Supported Imagers
+  docs:
+  - m3_supported
+  - sp_supported
+  - mi_supported
+  - requestformat
+
+- title: Spectral Analysis
+  docs:
+  - continuumcorrection
+  - spectralsmoothing
+  - plottypes
+  - symbology
+  - bandcharacterization
+  - spectrafaq
+
+- title: Derived Products
+  docs:
+  - m3_derived
+  - mi_derived
+  - clementine_derived
+- title: Tools
+  docs:
+  - mgm
+
+- title: Tutorials
+  docs:
+  - band_parameters
+
+- title: Miscellaneous
+  docs:
+  - troubleshooting
+
+- title: Meta
+  docs:
+  - contributing
+  - history

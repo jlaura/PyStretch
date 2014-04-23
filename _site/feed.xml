@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0"
+  xmlns:content="http://purl.org/rss/1.0/modules/content/"
+  xmlns:wfw="http://wellformedweb.org/CommentAPI/"
+  xmlns:dc="http://purl.org/dc/elements/1.1/"
+  xmlns:atom="http://www.w3.org/2005/Atom"
+  xmlns:sy="http://purl.org/rss/1.0/modules/syndication/"
+  xmlns:slash="http://purl.org/rss/1.0/modules/slash/"
+  >
+<channel>
+    <title xml:lang="en">Jekyll • Simple, blog-aware, static sites</title>
+    <atom:link type="application/atom+xml" href="http://jekyllrb.com/feed/" rel="self"/>
+    <link>http://jekyllrb.com</link>
+    <pubDate>Fri, 11 Apr 2014 09:09:38 -0700</pubDate>
+    <lastBuildDate>Fri, 11 Apr 2014 09:09:38 -0700</lastBuildDate>
+    <language>en-US</language>
+    <description>Transform your plain text into static websites and blogs.</description>
+    
+    <item>
+        <title>PySAT 0.2.1beta Released</title>
+        <link>http://jekyllrb.com/news/2014/04/11/pysat-0-2-1-release/</link>
+        <pubDate>Fri, 11 Apr 2014 15:35:48 -0700</pubDate>
+        <dc:creator>jlaura</dc:creator>
+        <category>release</category>
+        <guid isPermaLink="false">/news/2014/04/11/pysat-0-2-1-release</guid>
+        <description><![CDATA[ <p>Initial MGM integration with PySAT completed. Via a context menu spectra can be moved from a plot window to an MGM window.</p> ]]></description>
+    </item>
+    
+    <item>
+        <title>PySAT 0.2beta Released</title>
+        <link>http://jekyllrb.com/news/2014/04/04/pysat-0-2-release/</link>
+        <pubDate>Fri, 04 Apr 2014 15:35:48 -0700</pubDate>
+        <dc:creator>jlaura</dc:creator>
+        <category>release</category>
+        <guid isPermaLink="false">/news/2014/04/04/pysat-0-2-release</guid>
+        <description><![CDATA[ <p>Initial private beta release of PySAT.</p> ]]></description>
+    </item>
+    
+</channel>
+</rss>

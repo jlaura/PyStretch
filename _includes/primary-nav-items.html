@@ -1,0 +1,17 @@
+<ul>
+  <li class="{% if page.overview %}current{% endif %}">
+    <a href="{{ site.baseurl }}/">Overview</a>
+  </li>
+  <li class="">
+    <a href="https://github.com/jlaura/pysat/releases/tag/v0.2">Download</a>
+  </li>
+  <li class="{% if page.url contains '/docs/' %}current{% endif %}">
+    <a href="{{ site.baseurl }}/docs/home/">Docs<span class="show-on-mobiles">s</a>
+  </li>
+  <li class="{% if page.author %}current{% endif %}">
+    <a href="{{ site.baseurl }}/news/">News</a>
+  </li>
+  <li>
+    <a href="{{ site.repository }}"><span class="hide-on-mobiles">View on </span>GitHub</a>
+  </li>
+</ul>
