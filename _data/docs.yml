@@ -5,34 +5,24 @@
   - installation
   - usage
 
-- title: Supported Imagers
+- title: Image Segmentation
   docs:
-  - m3_supported
-  - sp_supported
-  - mi_supported
-  - requestformat
+  - horizontal
+  - vertical
+  - box
+  - by
 
-- title: Spectral Analysis
+- title: Linear Stretching
   docs:
-  - continuumcorrection
-  - spectralsmoothing
-  - plottypes
-  - symbology
-  - bandcharacterization
-  - spectrafaq
+  - std 
 
-- title: Derived Products
+- title: Nonlinear Stretching
   docs:
-  - m3_derived
-  - mi_derived
-  - clementine_derived
-- title: Tools
-  docs:
-  - mgm
+  - gamma
 
-- title: Tutorials
+- title: Filters
   docs:
-  - band_parameters
+  - laplacian
 
 - title: Miscellaneous
   docs:
