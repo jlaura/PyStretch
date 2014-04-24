@@ -47,8 +47,11 @@ except ImportError:
     print "Some functionality will not work without scipy installed."
 
 
-_gdal_to_ctypes = {1:ctypes.c_short}
-_gdal_to_numpy = {1:np.int16}
+_gdal_to_ctypes = {1:ctypes.c_short, 2:ctypes.c_int16, 3:ctypes.c_int16,
+                   4:ctypes.c_int32, 5:ctypes.c_int32, 6:ctypes.c_float,
+                   7:ctypes.c_double}
+_gdal_to_numpy = {1:np.int16, 2:np.int16, 3:np.int16, 4:np.int32,
+                  5:np.int32, 6:np.float32, 7:np.float32}
 
 _ctypes_to_np = {
     ctypes.c_char : np.int8,
@@ -64,7 +67,6 @@ _ctypes_to_np = {
     ctypes.c_float : np.float32,
     ctypes.c_double : np.float64
 }
-
 
 
 def segment_image(xsize, ysize, xsegment, ysegment):
@@ -100,6 +102,10 @@ def segment_image(xsize, ysize, xsegment, ysegment):
     return output
 
 
+def scale(a, b, bandmin, bandmax):
+    a = float(a)
+    b = float(b)
+    glb.sharedarray = (((b - a) * (glb.sharedarray - bandmin)) / (bandmax - bandmin)) + a
 
 
 def main(args):
@@ -164,7 +170,12 @@ def main(args):
 
     #A conscious decision to iterate over the bands in serial - a IO bottleneck anyway
     for j,band in enumerate(bands):
+
         stats = bandstats[j]
+        bandmin = stats['minimum']
+        bandmax = stats['maximum']
+        ndv = stats['ndv']
+        userndv = args['ndv']
         args.update(stats)
 
         if args['byline'] is True:
@@ -186,8 +197,11 @@ def main(args):
 
 
                 if args['ndv'] != None:
-                    #glb.sharedarray[mask] = args['ndv']
-                    output.GetRasterBand(j+1).SetNoDataValue(float(args['ndv']))
+                    glb.sharedarray[glb.sharedarray == ndv] = args['ndv']
+                    output.GetRasterBand(j+1).SetNoDataValue(float(userndv))
+                if args['scale'] is not None:
+                    #Scale the data before writing to disk
+                    scale(args['scale'][0], args['scale'][1], bandmin, bandmax)
                 output.GetRasterBand(j+1).WriteArray(glb.sharedarray[:intervaly, :intervalx], xstart,ystart)
 
                 if args['quiet']:
@@ -210,9 +224,10 @@ def main(args):
                     res = pool.apply(stretch, args=(slice(i, i+1), args))
 
                 if args['ndv'] != None:
-                    glb.sharedarray[mask] = args['ndv']
-                    output.GetRasterBand(j+1).SetNoDataValue(float(args['ndv']))
-
+                    glb.sharedarray[glb.sharedarray == ndv] = args['ndv']
+                    output.GetRasterBand(j+1).SetNoDataValue(float(userndv))
+                if args['scale'] is not None:
+                    scale(args['scale'][0], args['scale'][1], bandmin, bandmax)
                 output.GetRasterBand(j+1).WriteArray(glb.sharedarray[:intervaly, :intervalx], xstart,ystart)
 
                 if args['quiet']:
@@ -244,9 +259,11 @@ def main(args):
                     res = pool.apply(stretch, args=(slice(o[0], o[1]), args))
 
             if args['ndv'] != None:
-                glb.sharedarray[mask] = args['ndv']
-                output.GetRasterBand(j+1).SetNoDataValue(float(args['ndv']))
-
+                glb.sharedarray[glb.sharedarray == ndv] = args['ndv']
+                output.GetRasterBand(j+1).SetNoDataValue(float(userndv))
+            if args['scale'] is not None:
+                #Scale the data before writing to disk
+                scale(args['scale'][0], args['scale'][1], bandmin, bandmax)
             output.GetRasterBand(j+1).WriteArray(glb.sharedarray[:intervaly, :intervalx], xstart,ystart)
 
     Timer.totaltime(starttime)
